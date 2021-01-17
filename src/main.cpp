@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <math.h>
 #include "patterns.h"
-#include <Utils.h>
+#include <Drummer.h>
 
 // Pin setup
 #define RESET_BUTTON 8                  // Moves sequence back to position 0
@@ -44,7 +44,7 @@ int prevResetState = 0;
 
 // Utility variables
 int patternMux = 0;
-Utils utils;
+Drummer drummer;
 
 // Interrupt routine
 void onClockIn() {
@@ -56,10 +56,10 @@ void readButtons() {
 }
 
 void initPatterns() {
-    patternBD = utils.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
-    patternSN = utils.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
-    patternHHC = utils.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
-    patternHHO = utils.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
+    patternBD = drummer.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
+    patternSN = drummer.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
+    patternHHC = drummer.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
+    patternHHO = drummer.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
 }
 
 void setup() {
@@ -126,19 +126,19 @@ void loop() {
         switch (patternMux)
         {
         case 0:
-            patternBD = utils.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
+            patternBD = drummer.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
             patternMux++;
             break;
         case 1:
-            patternSN = utils.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
+            patternSN = drummer.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
             patternMux++;
             break;
         case 2:
-            patternHHC = utils.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
+            patternHHC = drummer.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
             patternMux++;
             break;
         case 3:
-            patternHHO = utils.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
+            patternHHO = drummer.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
             patternMux = 0;
             break;
         default:
