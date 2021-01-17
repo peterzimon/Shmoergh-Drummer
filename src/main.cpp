@@ -4,28 +4,31 @@
 #include <Utils.h>
 
 // Pin setup
-#define RESET_BUTTON 8              // Moves sequence back to position 0
-#define CLOCK_IN 2                  // Usually in 16ths
-#define CLOCK_PULSE_LENGTH 10       // (ms) Adjust this according to the clock source pulse length
-#define TRIGGER_PULSE_LENGTH 30     // (ms) How long should a trigger last
-#define PATTERN_SELECTOR_BD A0      // Bass drum pattern selector
-#define PATTERN_SELECTOR_SN A1      // Bass drum pattern selector
-#define PATTERN_SELECTOR_HHC A2     // Bass drum pattern selector
-#define PATTERN_SELECTOR_HHO A3     // Bass drum pattern selector
+#define RESET_BUTTON 8                  // Moves sequence back to position 0
+#define CLOCK_IN 2                      // Usually in 16ths
+#define CLOCK_PULSE_LENGTH 10           // (ms) Adjust this according to the clock source pulse length
+#define TRIGGER_PULSE_LENGTH 30         // (ms) How long should a trigger last
+#define PATTERN_SELECTOR_BD A0          // Bass drum pattern selector
+#define PATTERN_SELECTOR_SN A1          // Bass drum pattern selector
+#define PATTERN_SELECTOR_HHC A2         // Bass drum pattern selector
+#define PATTERN_SELECTOR_HHO A3         // Bass drum pattern selector
+
+// Clock
+#define DOWNBEAT 0b1000100010001000
 
 // Preset pins
-// #define CLOCK_LED 3                 // Clock (= clockIn / 4)
-// #define BD_OUT 4                    // Bass drum output
-// #define SN_OUT 5                    // Snare output
-// #define HHC_OUT 6                   // HiHat closed output
-// #define HHO_OUT 7                   // HiHat open output
+// #define CLOCK_LED 3                  // Clock (= clockIn / 4)
+// #define BD_OUT 4                     // Bass drum output
+// #define SN_OUT 5                     // Snare output
+// #define HHC_OUT 6                    // HiHat closed output
+// #define HHO_OUT 7                    // HiHat open output
 
 // Sequencer
-int pulseKeeper = 0;                // Variable to keep a pulse as long as it should last
+int pulseKeeper = 0;                    // Variable to keep a pulse as long as it should last
 int clockState = LOW;
 int pulseState = LOW;
 int triggerState = LOW;
-int currentStep = 0;                // Actual step in the sequence
+uint16_t currentStep = 0b1000000000000000;   // Actual step in the sequence, stored in binary, using less memory
 int patternBD = 0;
 int patternSN = 0;
 int patternHHC = 0;
@@ -73,10 +76,10 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, RISING);
 
     // Init patterns
-    noOfPatternsBD = sizeof(seqBD) / sizeof(seqBD[0]);
-    noOfPatternsSN = sizeof(seqSN) / sizeof(seqSN[0]);
-    noOfPatternsHHC = sizeof(seqHHC) / sizeof(seqHHC[0]);
-    noOfPatternsHHO = sizeof(seqHHO) / sizeof(seqHHO[0]);
+    noOfPatternsBD = NELEMS(seqBD);
+    noOfPatternsSN = NELEMS(seqSN);
+    noOfPatternsHHC = NELEMS(seqHHC);
+    noOfPatternsHHO = NELEMS(seqHHO);
     initPatterns();
 
     // Begin serial output
@@ -90,27 +93,27 @@ void loop() {
         int portDOut = B00000000;
 
         // Blink clock on every downbeat - on pin 3 of PORTD
-        if (currentStep % 4 == 0) {
+        if (currentStep & uint16_t(DOWNBEAT)) {
             portDOut = portDOut | B00001000;
         }
 
         // Trigger bass drum - on pin 4 of PORTD
-        if (seqBD[patternBD][currentStep] == 1) {
+        if (currentStep & uint16_t(seqBD[patternBD])) {
             portDOut = portDOut | B00010000;
         }
 
         // Trigger snare - on pin 5 of PORTD
-        if (seqSN[patternSN][currentStep] == 1) {
+        if (currentStep & uint16_t(seqSN[patternSN])) {
             portDOut = portDOut | B00100000;
         }
 
-        // Trigger hihat closed - on pin 6 of PORTD
-        if (seqHHC[patternHHC][currentStep] == 1) {
+        // // Trigger hihat closed - on pin 6 of PORTD
+        if (currentStep & uint16_t(seqHHC[patternHHC])) {
             portDOut = portDOut | B01000000;
         }
 
-        // Trigger hihat open - on pin 6 of PORTD
-        if (seqHHO[patternHHO][currentStep] == 1) {
+        // // Trigger hihat open - on pin 6 of PORTD
+        if (currentStep & uint16_t(seqHHO[patternHHO])) {
             portDOut = portDOut | B10000000;
         }
 
@@ -141,23 +144,11 @@ void loop() {
         default:
             break;
         }
-
-        // Debug
-        // Serial.println(analogRead(PATTERN_SELECTOR_HHC));
-
-        // Serial.print("Kick: ");
-        // Serial.println(patternBD);
-
-        // Serial.print("Snare: ");
-        // Serial.println(patternSN);
-
-        // Serial.print("HH Closed: ");
-        // Serial.println(patternHHC);
         
-        // Reset steps and shit
-        currentStep++;
-        if (currentStep == 16) {
-            currentStep = 0;
+        // Reset steps
+        currentStep >>= 1;
+        if (currentStep == 0) {
+            currentStep = 0b1000000000000000;
         }
 
         clockState = LOW;
@@ -165,7 +156,7 @@ void loop() {
         triggerState = HIGH;
         pulseKeeper = millis();
 
-        // Hack to fix dropping serial out
+        // Hack to fix dropping serial
         delay(TRIGGER_PULSE_LENGTH);
     }
 

@@ -5,6 +5,7 @@
 
 #ifndef Utils_h
 #define Utils_h
+#define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 #include <Arduino.h>
 
 class Utils {
