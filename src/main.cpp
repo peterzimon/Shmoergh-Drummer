@@ -25,9 +25,9 @@
 
 // Sequencer
 int pulseKeeper = 0;                    // Variable to keep a pulse as long as it should last
-int clockState = LOW;
-int pulseState = LOW;
-int triggerState = LOW;
+volatile bool clockState = false;
+bool pulseState = false;
+bool triggerState = false;
 uint16_t currentStep = 0b1000000000000000;   // Actual step in the sequence, stored in binary, using less memory
 int patternBD = 0;
 int patternSN = 0;
@@ -48,7 +48,7 @@ Utils utils;
 
 // Interrupt routine
 void onClockIn() {
-    clockState = HIGH;
+    clockState = true;
 }
 
 void readButtons() {
@@ -70,7 +70,7 @@ void setup() {
     // Set PORTD
     //             76543210
     DDRD = DDRD | B11111000;
-    PORTD = B00000000;
+    PORTD |= B00000000;
 
     // Listen to clock in on INT0 (digital pin 2)
     attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, RISING);
@@ -88,7 +88,7 @@ void setup() {
 
 void loop() {
     // Listen to external sync signals
-    if (clockState == HIGH && pulseState == LOW) {
+    if (clockState && !pulseState) {
 
         int portDOut = B00000000;
 
@@ -151,9 +151,9 @@ void loop() {
             currentStep = 0b1000000000000000;
         }
 
-        clockState = LOW;
-        pulseState = HIGH;
-        triggerState = HIGH;
+        clockState = false;
+        pulseState = true;
+        triggerState = true;
         pulseKeeper = millis();
 
         // Hack to fix dropping serial
@@ -166,13 +166,13 @@ void loop() {
     }
 
     // Reset output after trigger length duration
-    if (triggerState == HIGH && (millis() - pulseKeeper) > TRIGGER_PULSE_LENGTH) {
+    if (triggerState) {
         PORTD &= B00000011;
-        triggerState = LOW;
+        triggerState = false;
     }
 
     // Open up for external clock trigger
-    if (pulseState == HIGH && (millis() - pulseKeeper) > CLOCK_PULSE_LENGTH) {
-        pulseState = LOW;
+    if (pulseState && (millis() - pulseKeeper) > CLOCK_PULSE_LENGTH) {
+        pulseState = false;
     }
 }
