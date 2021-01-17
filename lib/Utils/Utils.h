@@ -10,8 +10,8 @@
 class Utils {
     public: 
         Utils();
-        int mapKnob(int noOfOptions, int potValue);
-        void blink(int pin);
+        uint16_t mapKnob(uint16_t noOfOptions, uint16_t potValue);
+        void blink(uint8_t pin);
     private:
         // 
 };

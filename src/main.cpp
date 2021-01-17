@@ -7,7 +7,7 @@
 #define RESET_BUTTON 8              // Moves sequence back to position 0
 #define CLOCK_IN 2                  // Usually in 16ths
 #define CLOCK_PULSE_LENGTH 10       // (ms) Adjust this according to the clock source pulse length
-#define TRIGGER_PULSE_LENGTH 20     // (ms) How long should a trigger last
+#define TRIGGER_PULSE_LENGTH 30     // (ms) How long should a trigger last
 #define PATTERN_SELECTOR_BD A0      // Bass drum pattern selector
 #define PATTERN_SELECTOR_SN A1      // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHC A2     // Bass drum pattern selector
@@ -52,6 +52,13 @@ void readButtons() {
     resetButtonState = digitalRead(RESET_BUTTON);
 }
 
+void initPatterns() {
+    patternBD = utils.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
+    patternSN = utils.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
+    patternHHC = utils.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
+    patternHHO = utils.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
+}
+
 void setup() {
     // Init pins
     pinMode(CLOCK_IN, INPUT);
@@ -65,15 +72,15 @@ void setup() {
     // Listen to clock in on INT0 (digital pin 2)
     attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, RISING);
 
-    // Count number of patters
-    noOfPatternsBD = (sizeof(seqBD) / sizeof(seqBD[0])) - 1;
-    noOfPatternsSN = (sizeof(seqSN) / sizeof(seqSN[0])) - 1;
-    noOfPatternsHHC = (sizeof(seqHHC) / sizeof(seqHHC[0])) - 1;
-    noOfPatternsHHO = (sizeof(seqHHO) / sizeof(seqHHO[0])) - 1;
+    // Init patterns
+    noOfPatternsBD = sizeof(seqBD) / sizeof(seqBD[0]);
+    noOfPatternsSN = sizeof(seqSN) / sizeof(seqSN[0]);
+    noOfPatternsHHC = sizeof(seqHHC) / sizeof(seqHHC[0]);
+    noOfPatternsHHO = sizeof(seqHHO) / sizeof(seqHHO[0]);
+    initPatterns();
 
     // Begin serial output
     Serial.begin(9600);
-    Serial.println(noOfPatternsBD);
 }
 
 void loop() {
@@ -134,6 +141,18 @@ void loop() {
         default:
             break;
         }
+
+        // Debug
+        // Serial.println(analogRead(PATTERN_SELECTOR_HHC));
+
+        // Serial.print("Kick: ");
+        // Serial.println(patternBD);
+
+        // Serial.print("Snare: ");
+        // Serial.println(patternSN);
+
+        // Serial.print("HH Closed: ");
+        // Serial.println(patternHHC);
         
         // Reset steps and shit
         currentStep++;
