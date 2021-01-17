@@ -6,24 +6,25 @@
 #define RESET_BUTTON 8              // Moves sequence back to position 0
 #define CLOCK_IN 2                  // Usually in 16ths
 #define CLOCK_PULSE_LENGTH 10       // (ms) Adjust this according to the clock source pulse length
-#define TRIGGER_LENGTH 50           // (ms) How long should a trigger last
+#define TRIGGER_PULSE_LENGTH 20     // (ms) How long should a trigger last
 #define PATTERN_SELECTOR_BD A0      // Bass drum pattern selector
 #define PATTERN_SELECTOR_SN A1      // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHC A2     // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHO A3     // Bass drum pattern selector
 
 // Preset pins
-// CLOCK_LED 3             Clock (= clockIn / 4)
-// BD_OUT 4                Bass drum output
-// SN_OUT 5                Snare output
-// HHC_OUT 6               HiHat closed output
-// HHO_OUT 7               HiHat open output
+// #define CLOCK_LED 3                 // Clock (= clockIn / 4)
+// #define BD_OUT 4                    // Bass drum output
+// #define SN_OUT 5                    // Snare output
+// #define HHC_OUT 6                   // HiHat closed output
+// #define HHO_OUT 7                   // HiHat open output
 
 // Sequencer
-int pulseKeeper = 0;            // Variable to keep a pulse as long as it should last
+int pulseKeeper = 0;                // Variable to keep a pulse as long as it should last
 int clockState = LOW;
 int pulseState = LOW;
-int currentStep = 0;            // Actual step in the sequence
+int triggerState = LOW;
+int currentStep = 0;                // Actual step in the sequence
 int patternBD = 0;
 int patternSN = 0;
 int patternHHC = 0;
@@ -83,8 +84,6 @@ void setup() {
 
     // Begin serial output
     Serial.begin(9600);
-
-
     Serial.println(noOfPatternsBD);
 }
 
@@ -120,7 +119,7 @@ void loop() {
         }
 
         // Update outputs
-        PORTD = portDOut;
+        PORTD |= portDOut;
         
         //Multiplex reading of patterns (analog outputs) so that it doesn't delay triggers
         // Basically, care only one change at a time and only at 16th notes. This also
@@ -144,8 +143,6 @@ void loop() {
         default:
             break;
         }
-
-        Serial.println(patternSN);
         
         // Reset
         currentStep++;
@@ -155,7 +152,10 @@ void loop() {
 
         clockState = LOW;
         pulseState = HIGH;
+        triggerState = HIGH;
         pulseKeeper = millis();
+
+        delay(TRIGGER_PULSE_LENGTH); // Hack to fix dropping serial out
     }
 
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
@@ -164,14 +164,13 @@ void loop() {
     }
 
     // Reset output after trigger length duration
-    if (millis() - pulseKeeper > TRIGGER_LENGTH) {
-        delay(20);
-        Serial.begin(9600);
-        PORTD = B00000000;
+    if (triggerState == HIGH && (millis() - pulseKeeper) > TRIGGER_PULSE_LENGTH) {
+        PORTD &= B00000011;
+        triggerState = LOW;
     }
 
     // Open up for external clock trigger
-    if (pulseState == HIGH && millis() - pulseKeeper > CLOCK_PULSE_LENGTH) {
+    if (pulseState == HIGH && (millis() - pulseKeeper) > CLOCK_PULSE_LENGTH) {
         pulseState = LOW;
     }
 }
