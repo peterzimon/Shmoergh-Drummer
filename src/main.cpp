@@ -12,11 +12,12 @@
 #define PATTERN_SELECTOR_SN A1          // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHC A2         // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHO A3         // Bass drum pattern selector
+#define INTENSITY_KNOB A4               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
 
 // Clock
 #define DOWNBEAT 0b1000100010001000
 
-// Preset pins
+// Preset pins – UNUSED! Instead all trigger outputs are written directly to port
 // #define CLOCK_LED 3                  // Clock (= clockIn / 4)
 // #define BD_OUT 4                     // Bass drum output
 // #define SN_OUT 5                     // Snare output
@@ -24,26 +25,33 @@
 // #define HHO_OUT 7                    // HiHat open output
 
 // Sequencer
-int pulseKeeper = 0;                    // Variable to keep a pulse as long as it should last
+int pulseKeeper         = 0;                    // Variable to keep a pulse as long as it should last
 volatile bool clockState = false;
-bool pulseState = false;
-bool triggerState = false;
-uint16_t currentStep = 0b1000000000000000;   // Actual step in the sequence, stored in binary, using less memory
-int patternBD = 0;
-int patternSN = 0;
-int patternHHC = 0;
-int patternHHO = 0;
-int noOfPatternsBD = 0;
-int noOfPatternsSN = 0;
-int noOfPatternsHHC = 0;
-int noOfPatternsHHO = 0;
+bool pulseState         = false;
+bool triggerState       = false;
+uint16_t currentStep    = 0b1000000000000000;   // Actual step in the sequence, stored in binary, using less memory
+int patternBD           = 0;
+int patternSN           = 0;
+int patternHHC          = 0;
+int patternHHO          = 0;
+int noOfPatternsBD      = 0;
+int noOfPatternsSN      = 0;
+int noOfPatternsHHC     = 0;
+int noOfPatternsHHO     = 0;
+int intensity           = 0;
+int currentIntensity    = 0;
+uint16_t extraNotesBD   = 0b0000000000000000;
+uint16_t extraNotesSN   = 0b0000000000000000;
+uint16_t extraNotesHHC  = 0b0000000000000000;
+uint16_t extraNotesHHO  = 0b0000000000000000;
 
 // Button states
 int resetButtonState = 0;
 int prevResetState = 0;
 
 // Utility variables
-int patternMux = 0;
+int analogMux = 0;
+int intensityMux = 0;
 Drummer drummer;
 
 // Interrupt routine
@@ -76,8 +84,8 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, RISING);
 
     // Init patterns
-    noOfPatternsBD = NELEMS(seqBD);
-    noOfPatternsSN = NELEMS(seqSN);
+    noOfPatternsBD  = NELEMS(seqBD);
+    noOfPatternsSN  = NELEMS(seqSN);
     noOfPatternsHHC = NELEMS(seqHHC);
     noOfPatternsHHO = NELEMS(seqHHO);
     initPatterns();
@@ -87,6 +95,7 @@ void setup() {
 }
 
 void loop() {
+
     // Listen to external sync signals
     if (clockState && !pulseState) {
 
@@ -98,23 +107,22 @@ void loop() {
         }
 
         // Trigger bass drum - on pin 4 of PORTD
-        uint16_t extraNotes = drummer.extraNotes(intensityBD[0]);
-        if (currentStep & uint16_t(seqBD[patternBD]) || currentStep & extraNotes) {
+        if (currentStep & uint16_t(seqBD[patternBD]) || currentStep & extraNotesBD) {
             portDOut = portDOut | B00010000;
         }
 
         // Trigger snare - on pin 5 of PORTD
-        if (currentStep & uint16_t(seqSN[patternSN])) {
+        if (currentStep & uint16_t(seqSN[patternSN]) || currentStep & extraNotesSN) {
             portDOut = portDOut | B00100000;
         }
 
         // // Trigger hihat closed - on pin 6 of PORTD
-        if (currentStep & uint16_t(seqHHC[patternHHC])) {
+        if (currentStep & uint16_t(seqHHC[patternHHC]) || currentStep & extraNotesHHC) {
             portDOut = portDOut | B01000000;
         }
 
         // // Trigger hihat open - on pin 6 of PORTD
-        if (currentStep & uint16_t(seqHHO[patternHHO])) {
+        if (currentStep & uint16_t(seqHHO[patternHHO]) || currentStep & extraNotesHHO) {
             portDOut = portDOut | B10000000;
         }
 
@@ -124,26 +132,63 @@ void loop() {
         // Multiplex reading of patterns (analog outputs) so that it doesn't delay triggers
         // Basically, care only one change at a time and only at 16th notes. This also
         // avoids sudden changes.
-        switch (patternMux)
+        switch (analogMux)
         {
         case 0:
             patternBD = drummer.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
-            patternMux++;
+            analogMux++;
             break;
         case 1:
             patternSN = drummer.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
-            patternMux++;
+            analogMux++;
             break;
         case 2:
             patternHHC = drummer.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
-            patternMux++;
+            analogMux++;
             break;
         case 3:
             patternHHO = drummer.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
-            patternMux = 0;
+            analogMux++;
+            break;
+        case 4:
+            intensity = drummer.mapKnob(INTENSITY_LEVELS, analogRead(INTENSITY_KNOB));
+            analogMux = 0;
             break;
         default:
             break;
+        }
+
+        /*
+        The extra note calculator is pretty cool but very calculating heavy.
+        In order to not compromise the accuracy these notes should be calculated
+        only if there's a change in intensity and only if it hasn't been 
+        calculated for the given drum at that intensity. Also the whole thing can 
+        be multiplexed. */
+        if (intensity != currentIntensity) {
+
+            // Add intensity one by one
+            switch (intensityMux)
+            {
+            case 0:
+                extraNotesBD = drummer.extraNotes(intensityBD[intensity]);
+                intensityMux++;
+                break;
+            case 1:
+                extraNotesSN = drummer.extraNotes(intensitySN[intensity]);
+                intensityMux++;
+                break;
+            case 2:
+                extraNotesHHC = drummer.extraNotes(intensityHHC[intensity]);
+                intensityMux++;
+                break;
+            case 3:
+                extraNotesHHO = drummer.extraNotes(intensityHHO[intensity]);
+                intensityMux = 0;
+                currentIntensity = intensity;
+                break;
+            default:
+                break;
+            }
         }
         
         // Reset steps
