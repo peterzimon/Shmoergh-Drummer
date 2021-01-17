@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <math.h>
 #include "patterns.h"
+#include <Utils.h>
 
 // Pin setup
 #define RESET_BUTTON 8              // Moves sequence back to position 0
@@ -40,13 +41,7 @@ int prevResetState = 0;
 
 // Utility variables
 int patternMux = 0;
-
-// Just blink a pin
-void blink(int pin) {
-    digitalWrite(pin, HIGH);
-    delay(50);
-    digitalWrite(pin, LOW);
-}
+Utils utils;
 
 // Interrupt routine
 void onClockIn() {
@@ -55,12 +50,6 @@ void onClockIn() {
 
 void readButtons() {
     resetButtonState = digitalRead(RESET_BUTTON);
-}
-
-int getPattern(int noOfPatterns, int potValue) {
-    int maxPotValue = 1023;
-    float range = maxPotValue / noOfPatterns;
-    return floor(potValue / range);
 }
 
 void setup() {
@@ -127,19 +116,19 @@ void loop() {
         switch (patternMux)
         {
         case 0:
-            patternBD = getPattern(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
+            patternBD = utils.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
             patternMux++;
             break;
         case 1:
-            patternSN = getPattern(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
+            patternSN = utils.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
             patternMux++;
             break;
         case 2:
-            patternHHC = getPattern(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
+            patternHHC = utils.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
             patternMux++;
             break;
         case 3:
-            patternHHO = getPattern(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
+            patternHHO = utils.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
             patternMux = 0;
             break;
         default:
