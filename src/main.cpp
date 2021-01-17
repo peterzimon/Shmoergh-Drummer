@@ -121,20 +121,22 @@ void loop() {
         // Update outputs
         PORTD |= portDOut;
         
-        //Multiplex reading of patterns (analog outputs) so that it doesn't delay triggers
+        // Multiplex reading of patterns (analog outputs) so that it doesn't delay triggers
         // Basically, care only one change at a time and only at 16th notes. This also
         // avoids sudden changes.
-        patternMux++;
         switch (patternMux)
         {
         case 0:
             patternBD = getPattern(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
+            patternMux++;
             break;
         case 1:
             patternSN = getPattern(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
+            patternMux++;
             break;
         case 2:
             patternHHC = getPattern(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
+            patternMux++;
             break;
         case 3:
             patternHHO = getPattern(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
@@ -144,7 +146,7 @@ void loop() {
             break;
         }
         
-        // Reset
+        // Reset steps and shit
         currentStep++;
         if (currentStep == 16) {
             currentStep = 0;
@@ -155,7 +157,8 @@ void loop() {
         triggerState = HIGH;
         pulseKeeper = millis();
 
-        delay(TRIGGER_PULSE_LENGTH); // Hack to fix dropping serial out
+        // Hack to fix dropping serial out
+        delay(TRIGGER_PULSE_LENGTH);
     }
 
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
