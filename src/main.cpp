@@ -1,3 +1,21 @@
+/*
+Shmøergh Drummer - Created by Peter Zimon
+---------------------------------------------------------------
+Modular synth drum module that can triggers sequences on 4 channels. 
+The premise of this module is that the output resembles a real drummer,
+so the kick, the snare and the hihats are triggered like it would be
+played by a drummer not a machine.
+
+There are 4 output channels with 5V trigger outputs: a kick, a snare,
+a closed and an open hihat, but ofc. it can be used to trigger anything.
+When clock is received, a 16beat loop is going on constantly. The output
+of each channel is a combination of two parameters: a fixed base pattern 
+and a intensity pattern that is added to the base. There are multiple base
+patterns and multiple intensity patterns for each channel. Additionally
+the intensity is semi-randomized, so the "fills" will never sound exactly 
+the same.
+*/
+
 #include <Arduino.h>
 #include <math.h>
 #include "patterns.h"
