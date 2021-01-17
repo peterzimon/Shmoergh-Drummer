@@ -12,11 +12,10 @@ class Drummer {
     public: 
         Drummer();
 
-        // Utils
         uint16_t mapKnob(uint16_t noOfOptions, uint16_t potValue);
         void blink(uint8_t pin);
 
-        // Algoriddims
+        uint16_t extraNotes(uint16_t map);
 
     private:
         // 

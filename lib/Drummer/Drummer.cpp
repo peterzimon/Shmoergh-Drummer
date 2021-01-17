@@ -16,3 +16,18 @@ void Drummer::blink(uint8_t pin) {
     delay(BLINK_DELAY);
     digitalWrite(pin, LOW);
 }
+
+uint16_t Drummer::extraNotes(uint16_t map) {
+    // Loop through the bits in the map and if it's 1 then randomize it
+    uint16_t currentMap = 1;
+    uint16_t extranotes = 0;
+    for (int i = 0; i < 16; i++) {
+        if (uint16_t(currentMap) & map) {
+            if (random(0, 2)) {
+                extranotes |= currentMap;
+            }
+        }
+        currentMap <<= 1;
+    }
+    return extranotes;
+}

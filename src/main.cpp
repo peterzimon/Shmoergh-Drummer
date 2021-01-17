@@ -98,7 +98,8 @@ void loop() {
         }
 
         // Trigger bass drum - on pin 4 of PORTD
-        if (currentStep & uint16_t(seqBD[patternBD])) {
+        uint16_t extraNotes = drummer.extraNotes(intensityBD[0]);
+        if (currentStep & uint16_t(seqBD[patternBD]) || currentStep & extraNotes) {
             portDOut = portDOut | B00010000;
         }
 

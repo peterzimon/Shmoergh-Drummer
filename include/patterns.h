@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-// Bass drum patterns
+// Base patterns
 uint16_t seqBD[] = {
     0b1000000000000000,
     0b1000000010000000,
@@ -24,4 +24,12 @@ uint16_t seqHHC[] = {
 
 uint16_t seqHHO[] = {
     0b0000000000000000
+};
+
+// Intensity
+uint16_t intensityBD[4] = {
+    0b0000000000000001,
+    0b0001000000000001,
+    0b0001001000000001,
+    0b0001001000000101
 };
