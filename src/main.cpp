@@ -30,7 +30,7 @@ the same.
 #define PATTERN_SELECTOR_SN A1          // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHC A2         // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHO A3         // Bass drum pattern selector
-#define INTENSITY_KNOB A4               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
+#define INTENSITY_KNOB A6               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
 
 // Clock
 #define DOWNBEAT 0b1000100010001000
@@ -77,15 +77,17 @@ void onClockIn() {
     clockState = true;
 }
 
-void readButtons() {
+void initButtons() {
     resetButtonState = digitalRead(RESET_BUTTON);
+    prevResetState = resetButtonState;
 }
 
-void initPatterns() {
+void initKnobs() {
     patternBD = drummer.mapKnob(noOfPatternsBD, analogRead(PATTERN_SELECTOR_BD));
     patternSN = drummer.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
     patternHHC = drummer.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
     patternHHO = drummer.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
+    intensity = analogRead(INTENSITY_KNOB);
 }
 
 void setup() {
@@ -102,11 +104,14 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, RISING);
 
     // Init patterns
+    initKnobs();
     noOfPatternsBD  = NELEMS(seqBD);
     noOfPatternsSN  = NELEMS(seqSN);
     noOfPatternsHHC = NELEMS(seqHHC);
     noOfPatternsHHO = NELEMS(seqHHO);
-    initPatterns();
+
+    // Init buttons
+    initButtons();
 
     // Begin serial output
     Serial.begin(9600);
@@ -182,6 +187,7 @@ void loop() {
         only if there's a change in intensity and only if it hasn't been 
         calculated for the given drum at that intensity. Also the whole thing can 
         be multiplexed. */
+        Serial.println(intensity);
         if (intensity != currentIntensity) {
 
             // Add intensity one by one
@@ -225,8 +231,12 @@ void loop() {
     }
 
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
-    if (digitalRead(RESET_BUTTON) == LOW) {
-        currentStep = 0;
+    resetButtonState = digitalRead(RESET_BUTTON);
+    if (resetButtonState != prevResetState) {
+        prevResetState = resetButtonState;
+        if (resetButtonState == LOW) {
+            currentStep = 0;
+        }
     }
 
     // Reset output after trigger length duration
