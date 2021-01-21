@@ -16,6 +16,8 @@ class Drummer {
         void blink(uint8_t pin);
 
         uint16_t extraNotes(uint16_t map);
+        uint16_t bmp(int sixteenths);
+        uint16_t shuffleDelay(float pulseLength, float shuffleResolution, float shuffleValue);
 
     private:
         // 

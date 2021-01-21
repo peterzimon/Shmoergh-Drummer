@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <math.h>
 #include "Drummer.h"
 
 #define POT_MAX_VALUE 1023.0
@@ -30,4 +31,12 @@ uint16_t Drummer::extraNotes(uint16_t map) {
         currentMap <<= 1;
     }
     return extranotes;
+}
+
+uint16_t Drummer::bmp(int sixteenths) {
+    return floor(60000 / (sixteenths * 4));
+}
+
+uint16_t Drummer::shuffleDelay(float pulseLength, float shuffleResolution,  float shuffleValue) {
+    return round((((pulseLength / 2) - (pulseLength / 100)) / shuffleResolution) * shuffleValue); // (pulseLength / 100) is the spacing between the full pulse length and max shuffle time
 }

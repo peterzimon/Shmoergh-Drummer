@@ -31,6 +31,8 @@ the same.
 #define PATTERN_SELECTOR_HHC A2         // Bass drum pattern selector
 #define PATTERN_SELECTOR_HHO A3         // Bass drum pattern selector
 #define INTENSITY_KNOB A6               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
+#define SHUFFLE_KNOB A7                 // Swing/shuffle value knob
+#define SHUFFLE_RESOLUTION 20           // How sensitive shuffle should be
 
 // Clock
 #define DOWNBEAT 0b1000100010001000
@@ -43,25 +45,28 @@ the same.
 // #define HHO_OUT 7                    // HiHat open output
 
 // Sequencer
-int pulseKeeper         = 0;                    // Variable to keep a pulse as long as it should last
-volatile bool clockState = false;
-bool pulseState         = false;
-bool triggerState       = false;
-uint16_t currentStep    = 0b1000000000000000;   // Actual step in the sequence, stored in binary, using less memory
-int patternBD           = 0;
-int patternSN           = 0;
-int patternHHC          = 0;
-int patternHHO          = 0;
-int noOfPatternsBD      = 0;
-int noOfPatternsSN      = 0;
-int noOfPatternsHHC     = 0;
-int noOfPatternsHHO     = 0;
-int intensity           = 0;
-int currentIntensity    = 0;
-uint16_t extraNotesBD   = 0b0000000000000000;
-uint16_t extraNotesSN   = 0b0000000000000000;
-uint16_t extraNotesHHC  = 0b0000000000000000;
-uint16_t extraNotesHHO  = 0b0000000000000000;
+int pulseKeeper             = 0;                    // Variable to keep a pulse as long as it should last
+volatile bool clockState    = false;
+bool pulseState             = false;
+bool triggerState           = false;
+uint16_t currentStep        = 0b1000000000000000;   // Actual step in the sequence, stored in binary, using less memory
+uint8_t currentSixteenth    = 0;
+int patternBD               = 0;
+int patternSN               = 0;
+int patternHHC              = 0;
+int patternHHO              = 0;
+int noOfPatternsBD          = 0;
+int noOfPatternsSN          = 0;
+int noOfPatternsHHC         = 0;
+int noOfPatternsHHO         = 0;
+int intensity               = 0;
+int currentIntensity        = 0;
+int shuffleValue            = 0;                    // 0 - 50
+uint16_t extraNotesBD       = 0b0000000000000000;
+uint16_t extraNotesSN       = 0b0000000000000000;
+uint16_t extraNotesHHC      = 0b0000000000000000;
+uint16_t extraNotesHHO      = 0b0000000000000000;
+uint16_t pulseLength        = 0;
 
 // Button states
 int resetButtonState = 0;
@@ -87,7 +92,9 @@ void initKnobs() {
     patternSN = drummer.mapKnob(noOfPatternsSN, analogRead(PATTERN_SELECTOR_SN));
     patternHHC = drummer.mapKnob(noOfPatternsHHC, analogRead(PATTERN_SELECTOR_HHC));
     patternHHO = drummer.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
-    intensity = analogRead(INTENSITY_KNOB);
+    intensity = drummer.mapKnob(INTENSITY_LEVELS, analogRead(INTENSITY_KNOB));
+    shuffleValue = drummer.mapKnob(SHUFFLE_RESOLUTION, analogRead(SHUFFLE_KNOB));
+
 }
 
 void setup() {
@@ -149,6 +156,10 @@ void loop() {
             portDOut = portDOut | B10000000;
         }
 
+        if (shuffleValue != 0 && currentSixteenth % 2) {
+            delay((drummer.shuffleDelay(float(pulseLength), float(SHUFFLE_RESOLUTION), float(shuffleValue))));
+        }
+
         // Update outputs
         PORTD |= portDOut;
         
@@ -175,6 +186,10 @@ void loop() {
             break;
         case 4:
             intensity = drummer.mapKnob(INTENSITY_LEVELS, analogRead(INTENSITY_KNOB));
+            analogMux++;
+            break;
+        case 5:
+            shuffleValue = drummer.mapKnob(SHUFFLE_RESOLUTION, analogRead(SHUFFLE_KNOB));
             analogMux = 0;
             break;
         default:
@@ -187,7 +202,6 @@ void loop() {
         only if there's a change in intensity and only if it hasn't been 
         calculated for the given drum at that intensity. Also the whole thing can 
         be multiplexed. */
-        Serial.println(intensity);
         if (intensity != currentIntensity) {
 
             // Add intensity one by one
@@ -221,9 +235,13 @@ void loop() {
             currentStep = 0b1000000000000000;
         }
 
+        currentSixteenth++;
+        if (currentSixteenth >= 16) currentSixteenth = 0;
+
         clockState = false;
         pulseState = true;
         triggerState = true;
+        pulseLength = millis() - pulseKeeper;
         pulseKeeper = millis();
 
         // Hack to fix dropping serial
