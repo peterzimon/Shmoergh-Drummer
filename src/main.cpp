@@ -160,6 +160,8 @@ void loop() {
             delay((drummer.shuffleDelay(float(pulseLength), float(SHUFFLE_RESOLUTION), float(shuffleValue))));
         }
 
+        Serial.println(patternHHC);
+
         // Update outputs
         PORTD |= portDOut;
         
