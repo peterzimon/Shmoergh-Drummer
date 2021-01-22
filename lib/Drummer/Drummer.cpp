@@ -38,5 +38,5 @@ uint16_t Drummer::bmp(int sixteenths) {
 }
 
 uint16_t Drummer::shuffleDelay(float pulseLength, float shuffleResolution,  float shuffleValue) {
-    return round((((pulseLength / 2) - (pulseLength / 100)) / shuffleResolution) * shuffleValue); // (pulseLength / 100) is the spacing between the full pulse length and max shuffle time
+    return round((((pulseLength / 1.5) - (pulseLength / 100)) / shuffleResolution) * shuffleValue); // (pulseLength / 100) is the spacing between the full pulse length and max shuffle time
 }
