@@ -256,6 +256,7 @@ void loop() {
         prevResetState = resetButtonState;
         if (resetButtonState == LOW) {
             currentStep = 0;
+            currentSixteenth = 0;
         }
     }
 
