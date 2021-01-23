@@ -24,12 +24,12 @@ the same.
 // Pin setup
 #define RESET_BUTTON 8                  // Moves sequence back to position 0
 #define CLOCK_IN 2                      // Usually in 16ths
-#define CLOCK_PULSE_LENGTH 10           // (ms) Adjust this according to the clock source pulse length
+#define CLOCK_PULSE_LENGTH 20           // (ms) Adjust this according to the clock source pulse length
 #define TRIGGER_PULSE_LENGTH 30         // (ms) How long should a trigger last
 #define PATTERN_SELECTOR_BD A0          // Bass drum pattern selector
-#define PATTERN_SELECTOR_SN A1          // Bass drum pattern selector
-#define PATTERN_SELECTOR_HHC A2         // Bass drum pattern selector
-#define PATTERN_SELECTOR_HHO A3         // Bass drum pattern selector
+#define PATTERN_SELECTOR_SN A1          // Snare drum pattern selector
+#define PATTERN_SELECTOR_HHC A2         // Hihat Closed drum pattern selector
+#define PATTERN_SELECTOR_HHO A3         // Hihat Open drum pattern selector
 #define INTENSITY_KNOB A6               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
 #define SHUFFLE_KNOB A7                 // Swing/shuffle value knob
 #define SHUFFLE_RESOLUTION 20           // How sensitive shuffle should be
@@ -94,7 +94,6 @@ void initKnobs() {
     patternHHO = drummer.mapKnob(noOfPatternsHHO, analogRead(PATTERN_SELECTOR_HHO));
     intensity = drummer.mapKnob(INTENSITY_LEVELS, analogRead(INTENSITY_KNOB));
     shuffleValue = drummer.mapKnob(SHUFFLE_RESOLUTION, analogRead(SHUFFLE_KNOB));
-
 }
 
 void setup() {
@@ -108,7 +107,7 @@ void setup() {
     PORTD |= B00000000;
 
     // Listen to clock in on INT0 (digital pin 2)
-    attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, RISING);
+    attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, FALLING);
 
     // Init patterns
     initKnobs();
@@ -127,7 +126,7 @@ void setup() {
 void loop() {
 
     // Listen to external sync signals
-    if (clockState && !pulseState) {
+    if (clockState) {
 
         int portDOut = B00000000;
 
@@ -159,8 +158,6 @@ void loop() {
         if (shuffleValue != 0 && currentSixteenth % 2) {
             delay((drummer.shuffleDelay(float(pulseLength), float(SHUFFLE_RESOLUTION), float(shuffleValue))));
         }
-
-        Serial.println(patternHHC);
 
         // Update outputs
         PORTD |= portDOut;
@@ -197,6 +194,8 @@ void loop() {
         default:
             break;
         }
+
+        // Serial.println(shuffleValue);
 
         /*
         The extra note calculator is pretty cool but very calculating heavy.
@@ -237,17 +236,19 @@ void loop() {
             currentStep = 0b1000000000000000;
         }
 
+        // Shuffle stuff
         currentSixteenth++;
         if (currentSixteenth >= 16) currentSixteenth = 0;
-
-        clockState = false;
-        pulseState = true;
-        triggerState = true;
         pulseLength = millis() - pulseKeeper;
         pulseKeeper = millis();
 
-        // Hack to fix dropping serial
-        delay(TRIGGER_PULSE_LENGTH);
+        // Delay for the length of a pulse length...
+        delay(CLOCK_PULSE_LENGTH);
+
+        // ...and reset the output
+        PORTD &= B00000011;
+
+        clockState = false;
     }
 
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
@@ -258,16 +259,5 @@ void loop() {
             currentStep = 0;
             currentSixteenth = 0;
         }
-    }
-
-    // Reset output after trigger length duration
-    if (triggerState) {
-        PORTD &= B00000011;
-        triggerState = false;
-    }
-
-    // Open up for external clock trigger
-    if (pulseState && (millis() - pulseKeeper) > CLOCK_PULSE_LENGTH) {
-        pulseState = false;
     }
 }
