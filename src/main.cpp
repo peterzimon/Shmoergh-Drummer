@@ -254,10 +254,12 @@ void loop() {
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
     resetButtonState = digitalRead(RESET_BUTTON);
     if (resetButtonState != prevResetState) {
-        prevResetState = resetButtonState;
-        if (resetButtonState == LOW) {
+        if (resetButtonState == HIGH) {
             currentStep = 0;
             currentSixteenth = 0;
+            clockState = false;
         }
+        prevResetState = resetButtonState;
+        delay(20); // Debounce
     }
 }
