@@ -24,14 +24,16 @@ the same.
 // Pin setup
 #define RESET_BUTTON 8                  // Moves sequence back to position 0
 #define CLOCK_IN 2                      // Usually in 16ths
-#define CLOCK_PULSE_LENGTH 20           // (ms) Adjust this according to the clock source pulse length
-#define TRIGGER_PULSE_LENGTH 30         // (ms) How long should a trigger last
 #define PATTERN_SELECTOR_BD A0          // Bass drum pattern selector
 #define PATTERN_SELECTOR_SN A1          // Snare drum pattern selector
 #define PATTERN_SELECTOR_HHC A2         // Hihat Closed drum pattern selector
 #define PATTERN_SELECTOR_HHO A3         // Hihat Open drum pattern selector
-#define INTENSITY_KNOB A6               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
-#define SHUFFLE_KNOB A7                 // Swing/shuffle value knob
+#define INTENSITY_KNOB A4               // Well... it's the... wait for it... INTENSITY KNOB (I know right)
+#define SHUFFLE_KNOB A5                 // Swing/shuffle value knob
+
+// Constants
+#define CLOCK_PULSE_LENGTH 20           // (ms) Adjust this according to the clock source pulse length
+#define TRIGGER_PULSE_LENGTH 30         // (ms) How long should a trigger last
 #define SHUFFLE_RESOLUTION 20           // How sensitive shuffle should be
 
 // Clock
