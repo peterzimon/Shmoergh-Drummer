@@ -85,6 +85,9 @@ void onClockIn() {
 }
 
 void initButtons() {
+    pinMode(CLOCK_IN, INPUT);
+    pinMode(RESET_BUTTON, INPUT_PULLUP);
+
     resetButtonState = digitalRead(RESET_BUTTON);
     prevResetState = resetButtonState;
 }
@@ -99,9 +102,10 @@ void initKnobs() {
 }
 
 void setup() {
-    // Init pins
-    pinMode(CLOCK_IN, INPUT);
-    pinMode(RESET_BUTTON, INPUT_PULLUP);
+
+    // Init inputs
+    initButtons();
+    initKnobs();
 
     // Set PORTD
     //             76543210
@@ -112,14 +116,10 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(CLOCK_IN), onClockIn, FALLING);
 
     // Init patterns
-    initKnobs();
     noOfPatternsBD  = NELEMS(seqBD);
     noOfPatternsSN  = NELEMS(seqSN);
     noOfPatternsHHC = NELEMS(seqHHC);
     noOfPatternsHHO = NELEMS(seqHHO);
-
-    // Init buttons
-    initButtons();
 
     // Begin serial output
     Serial.begin(9600);
@@ -256,7 +256,7 @@ void loop() {
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
     resetButtonState = digitalRead(RESET_BUTTON);
     if (resetButtonState != prevResetState) {
-        if (resetButtonState == HIGH) {
+        if (resetButtonState == LOW) {
             currentStep = 0;
             currentSixteenth = 0;
             clockState = false;
