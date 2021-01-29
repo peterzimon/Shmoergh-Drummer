@@ -169,6 +169,9 @@ void calculateIntensity(bool force) {
         default:
             break;
         }
+
+        Serial.println("---");
+        Serial.println(intensity);
     }
 }
 
