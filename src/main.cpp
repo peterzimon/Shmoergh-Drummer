@@ -35,8 +35,11 @@ the same.
 #define CLOCK_PULSE_LENGTH 20           // (ms) Adjust this according to the clock source pulse length
 #define TRIGGER_PULSE_LENGTH 20         // (ms) How long should a trigger last
 #define SHUFFLE_RESOLUTION 20           // How sensitive shuffle should be
-#define AUTO_RESET_WAIT 3000            // How long it should wait before autoreset
+#define AUTO_RESET_TIME 3000            // How long it should wait before autoreset
 #define RESET_STEP 0b1000000000000001               // Where to start sequence after auto reset. Dealing with latency
+
+// Handling long/short press
+#define LONG_PRESS_TIME 500
 
 // Clock
 #define DOWNBEAT 0b1000100010001000
@@ -74,8 +77,10 @@ uint16_t pulseLength        = 0;
 unsigned long lastClock               = 0;
 
 // Button states
-int resetButtonState = 0;
-int prevResetState = 0;
+int resetButtonState = LOW;
+int prevResetState = LOW;
+unsigned long pressedTime = 0;
+unsigned long releasedTime = 0;
 
 // Utility variables
 int analogMux = 0;
@@ -113,6 +118,13 @@ void playStartupAnimation() {
     drummer.trigger(HHO_OUT);
 }
 
+void blinkLed(int led, int times = 1, int delayTime = 50) {
+    for (int i = 0; i < times; i++) {
+        drummer.trigger(led);
+        delay(delayTime);
+    }
+}
+
 void resetSequence(bool autoreset) {
     currentStep = RESET_STEP;
     currentSixteenth = 0;
@@ -121,11 +133,42 @@ void resetSequence(bool autoreset) {
     lastClock = millis();
 
     if (autoreset) {
-        drummer.trigger(CLOCK_LED);
-        delay(50);
-        drummer.trigger(CLOCK_LED);
-        delay(50);
-        drummer.trigger(CLOCK_LED);
+        blinkLed(CLOCK_LED, 3, 50);
+    }
+}
+
+void calculateIntensity(bool force) {
+    /*
+    The extra note calculator is pretty cool but very calculating heavy.
+    In order to not compromise the accuracy these notes should be calculated
+    only if there's a change in intensity and only if it hasn't been 
+    calculated for the given drum at that intensity. Also the whole thing can 
+    be multiplexed. 
+    /* -------------------------------------------------------------------- */
+    if (intensity != currentIntensity || force) {
+        // Add intensity one by one
+        switch (intensityMux)
+        {
+        case 0:
+            extraNotesBD = drummer.extraNotes(intensityBD[intensity]);
+            intensityMux++;
+            break;
+        case 1:
+            extraNotesSN = drummer.extraNotes(intensitySN[intensity]);
+            intensityMux++;
+            break;
+        case 2:
+            extraNotesHHC = drummer.extraNotes(intensityHHC[intensity]);
+            intensityMux++;
+            break;
+        case 3:
+            extraNotesHHO = drummer.extraNotes(intensityHHO[intensity]);
+            intensityMux = 0;
+            currentIntensity = intensity;
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -227,40 +270,7 @@ void loop() {
             break;
         }
 
-        // Serial.println(shuffleValue);
-
-        /*
-        The extra note calculator is pretty cool but very calculating heavy.
-        In order to not compromise the accuracy these notes should be calculated
-        only if there's a change in intensity and only if it hasn't been 
-        calculated for the given drum at that intensity. Also the whole thing can 
-        be multiplexed. */
-        if (intensity != currentIntensity) {
-
-            // Add intensity one by one
-            switch (intensityMux)
-            {
-            case 0:
-                extraNotesBD = drummer.extraNotes(intensityBD[intensity]);
-                intensityMux++;
-                break;
-            case 1:
-                extraNotesSN = drummer.extraNotes(intensitySN[intensity]);
-                intensityMux++;
-                break;
-            case 2:
-                extraNotesHHC = drummer.extraNotes(intensityHHC[intensity]);
-                intensityMux++;
-                break;
-            case 3:
-                extraNotesHHO = drummer.extraNotes(intensityHHO[intensity]);
-                intensityMux = 0;
-                currentIntensity = intensity;
-                break;
-            default:
-                break;
-            }
-        }
+        calculateIntensity(false);
 
         // Update outputs
         PORTD |= portDOut;
@@ -301,18 +311,34 @@ void loop() {
         pulseState = false;
     }
 
-    // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
+    /*  
+    Reset button
+    
+    While playing
+    -------------
+    - when short pressed, sequence restarts from top on release
+    - when long pressed rolls the dice on intensity (recalculates extra random notes)
+    /* ------------------------------------------------- */
     resetButtonState = digitalRead(RESET_BUTTON);
-    if (resetButtonState != prevResetState) {
-        if (resetButtonState == LOW) {
-            resetSequence(false);
+    if  (resetButtonState != prevResetState) {
+        if (resetButtonState == LOW) { // Reset button is pressed
+            pressedTime = millis();
+        } else { // Reset button is released
+            releasedTime = millis();
+            long pressedDuration = releasedTime - pressedTime;
+            if (pressedDuration > LONG_PRESS_TIME) {
+                calculateIntensity(true);
+            } else {
+                resetSequence(false);
+            }
         }
         prevResetState = resetButtonState;
-        delay(20); // Debounce
+        delay(50);
     }
+    
 
     // Autoreset after 2 seconds of clock not coming in
-    if ((millis() - lastClock) > AUTO_RESET_WAIT && currentStep != RESET_STEP) {
+    if ((millis() - lastClock) > AUTO_RESET_TIME && currentStep != RESET_STEP) {
         resetSequence(true);
     }
 }
