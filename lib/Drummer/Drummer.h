@@ -13,7 +13,7 @@ class Drummer {
         Drummer();
 
         uint16_t mapKnob(uint16_t noOfOptions, uint16_t potValue);
-        void blink(uint8_t pin);
+        void trigger(uint8_t pin);
 
         uint16_t extraNotes(uint16_t map);
         uint16_t bmp(int sixteenths);

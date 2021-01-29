@@ -33,21 +33,22 @@ the same.
 
 // Constants
 #define CLOCK_PULSE_LENGTH 20           // (ms) Adjust this according to the clock source pulse length
-#define TRIGGER_PULSE_LENGTH 30         // (ms) How long should a trigger last
+#define TRIGGER_PULSE_LENGTH 20         // (ms) How long should a trigger last
 #define SHUFFLE_RESOLUTION 20           // How sensitive shuffle should be
+#define AUTO_RESET_STEP 0b1000000000000001               // Where to start sequence after auto reset. Dealing with latency
 
 // Clock
 #define DOWNBEAT 0b1000100010001000
 
-// Preset pins – UNUSED! Instead all trigger outputs are written directly to port
-// #define CLOCK_LED 3                  // Clock (= clockIn / 4)
-// #define BD_OUT 4                     // Bass drum output
-// #define SN_OUT 5                     // Snare output
-// #define HHC_OUT 6                    // HiHat closed output
-// #define HHO_OUT 7                    // HiHat open output
+// Preset pins – Used only to trigger outputs individually. While playing the sequence the output is written directly to port D
+#define CLOCK_LED 3                  // Clock (= clockIn / 4)
+#define BD_OUT 4                     // Bass drum output
+#define SN_OUT 5                     // Snare output
+#define HHC_OUT 6                    // HiHat closed output
+#define HHO_OUT 7                    // HiHat open output
 
 // Sequencer
-int pulseKeeper             = 0;                    // Variable to keep a pulse as long as it should last
+unsigned long pulseKeeper             = 0;                    // Variable to keep a pulse as long as it should last
 volatile bool clockState    = false;
 bool pulseState             = false;
 bool triggerState           = false;
@@ -69,6 +70,7 @@ uint16_t extraNotesSN       = 0b0000000000000000;
 uint16_t extraNotesHHC      = 0b0000000000000000;
 uint16_t extraNotesHHO      = 0b0000000000000000;
 uint16_t pulseLength        = 0;
+unsigned long lastClock               = 0;
 
 // Button states
 int resetButtonState = 0;
@@ -101,6 +103,31 @@ void initKnobs() {
     shuffleValue = drummer.mapKnob(SHUFFLE_RESOLUTION, analogRead(SHUFFLE_KNOB));
 }
 
+void playStartupAnimation() {
+    delay(100);
+    drummer.trigger(CLOCK_LED);
+    drummer.trigger(BD_OUT);
+    drummer.trigger(SN_OUT);
+    drummer.trigger(HHC_OUT);
+    drummer.trigger(HHO_OUT);
+}
+
+void resetSequence(bool autoreset) {
+    currentStep = AUTO_RESET_STEP;
+    currentSixteenth = 0;
+    clockState = false;
+    shuffleValue = 0;
+    lastClock = millis();
+
+    if (autoreset) {
+        drummer.trigger(CLOCK_LED);
+        delay(50);
+        drummer.trigger(CLOCK_LED);
+        delay(50);
+        drummer.trigger(CLOCK_LED);
+    }
+}
+
 void setup() {
 
     // Init inputs
@@ -123,12 +150,17 @@ void setup() {
 
     // Begin serial output
     Serial.begin(9600);
+
+    // Bootup led parade (note: also hits triggers)
+    playStartupAnimation();
+
+    resetSequence(true);
 }
 
 void loop() {
 
     // Listen to external sync signals
-    if (clockState) {
+    if (clockState && !pulseState) {
 
         int portDOut = B00000000;
 
@@ -160,9 +192,6 @@ void loop() {
         if (shuffleValue != 0 && currentSixteenth % 2) {
             delay((drummer.shuffleDelay(float(pulseLength), float(SHUFFLE_RESOLUTION), float(shuffleValue))));
         }
-
-        // Update outputs
-        PORTD |= portDOut;
         
         // Multiplex reading of patterns (analog outputs) so that it doesn't delay triggers
         // Basically, care only one change at a time and only at 16th notes. This also
@@ -231,6 +260,10 @@ void loop() {
                 break;
             }
         }
+
+        // Update outputs
+        PORTD |= portDOut;
+        triggerState = true;
         
         // Reset steps
         currentStep >>= 1;
@@ -242,26 +275,46 @@ void loop() {
         currentSixteenth++;
         if (currentSixteenth >= 16) currentSixteenth = 0;
         pulseLength = millis() - pulseKeeper;
+        
+        clockState = false;
+        pulseState = true;
+        triggerState = true;
+        
         pulseKeeper = millis();
+        lastClock = millis();
 
+        // I kept this here becuase previously I had problems with the millis() approach. This here worked...
         // Delay for the length of a pulse length...
-        delay(CLOCK_PULSE_LENGTH);
+        // delay(CLOCK_PULSE_LENGTH);
 
         // ...and reset the output
-        PORTD &= B00000011;
+        // PORTD &= B00000011;
+    }
 
-        clockState = false;
+    if (triggerState && (millis() - pulseKeeper) > TRIGGER_PULSE_LENGTH) {
+        PORTD &= B00000011;
+        triggerState = false;
+    }
+
+    if (pulseState && (millis() - pulseKeeper) > CLOCK_PULSE_LENGTH) {
+        pulseState = false;
     }
 
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
     resetButtonState = digitalRead(RESET_BUTTON);
     if (resetButtonState != prevResetState) {
-        if (resetButtonState == LOW) {
-            currentStep = 0;
-            currentSixteenth = 0;
-            clockState = false;
+        if (resetButtonState == HIGH) {
+            resetSequence(false);
         }
         prevResetState = resetButtonState;
         delay(20); // Debounce
+    }
+
+    // Autoreset after 2 seconds of clock not coming in
+    if ((millis() - lastClock) > 2000 && currentStep != AUTO_RESET_STEP) {
+        Serial.println(millis());
+        Serial.println(lastClock);
+        Serial.println("---");
+        resetSequence(true);
     }
 }

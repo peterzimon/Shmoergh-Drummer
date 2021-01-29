@@ -12,7 +12,7 @@ uint16_t Drummer::mapKnob(uint16_t noOfOptions, uint16_t potValue) {
     return floor(potValue / range);
 }
 
-void Drummer::blink(uint8_t pin) {
+void Drummer::trigger(uint8_t pin) {
     digitalWrite(pin, HIGH);
     delay(BLINK_DELAY);
     digitalWrite(pin, LOW);
