@@ -35,7 +35,8 @@ the same.
 #define CLOCK_PULSE_LENGTH 20           // (ms) Adjust this according to the clock source pulse length
 #define TRIGGER_PULSE_LENGTH 20         // (ms) How long should a trigger last
 #define SHUFFLE_RESOLUTION 20           // How sensitive shuffle should be
-#define AUTO_RESET_STEP 0b1000000000000001               // Where to start sequence after auto reset. Dealing with latency
+#define AUTO_RESET_WAIT 3000            // How long it should wait before autoreset
+#define RESET_STEP 0b1000000000000001               // Where to start sequence after auto reset. Dealing with latency
 
 // Clock
 #define DOWNBEAT 0b1000100010001000
@@ -113,7 +114,7 @@ void playStartupAnimation() {
 }
 
 void resetSequence(bool autoreset) {
-    currentStep = AUTO_RESET_STEP;
+    currentStep = RESET_STEP;
     currentSixteenth = 0;
     clockState = false;
     shuffleValue = 0;
@@ -303,7 +304,7 @@ void loop() {
     // TODO: Read various buttons with multiplexing to avoid delays and skipped triggers
     resetButtonState = digitalRead(RESET_BUTTON);
     if (resetButtonState != prevResetState) {
-        if (resetButtonState == HIGH) {
+        if (resetButtonState == LOW) {
             resetSequence(false);
         }
         prevResetState = resetButtonState;
@@ -311,10 +312,7 @@ void loop() {
     }
 
     // Autoreset after 2 seconds of clock not coming in
-    if ((millis() - lastClock) > 2000 && currentStep != AUTO_RESET_STEP) {
-        Serial.println(millis());
-        Serial.println(lastClock);
-        Serial.println("---");
+    if ((millis() - lastClock) > AUTO_RESET_WAIT && currentStep != RESET_STEP) {
         resetSequence(true);
     }
 }
