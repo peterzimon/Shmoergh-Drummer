@@ -10,16 +10,16 @@
 
 class Drummer {
     public: 
-        Drummer();
+        Drummer(int maxIntensity = 0);
 
         uint16_t mapKnob(uint16_t noOfOptions, uint16_t potValue);
         void trigger(uint8_t pin);
 
-        uint16_t extraNotes(uint16_t map);
+        uint16_t extraNotes(uint16_t map, int intensity = 0);
         uint16_t bmp(int sixteenths);
         uint16_t shuffleDelay(float pulseLength, float shuffleResolution, float shuffleValue);
 
     private:
-        // 
+        int _maxIntensity = 0;
 };
 #endif

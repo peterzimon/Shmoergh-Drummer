@@ -85,7 +85,7 @@ unsigned long releasedTime = 0;
 // Utility variables
 int analogMux = 0;
 int intensityMux = 0;
-Drummer drummer;
+Drummer drummer(INTENSITY_LEVELS);
 
 // Interrupt routine
 void onClockIn() {
@@ -150,28 +150,25 @@ void calculateIntensity(bool force) {
         switch (intensityMux)
         {
         case 0:
-            extraNotesBD = drummer.extraNotes(intensityBD[intensity]);
+            extraNotesBD = drummer.extraNotes(intensityBD[intensity], intensity);
             intensityMux++;
             break;
         case 1:
-            extraNotesSN = drummer.extraNotes(intensitySN[intensity]);
+            extraNotesSN = drummer.extraNotes(intensitySN[intensity], intensity);
             intensityMux++;
             break;
         case 2:
-            extraNotesHHC = drummer.extraNotes(intensityHHC[intensity]);
+            extraNotesHHC = drummer.extraNotes(intensityHHC[intensity], intensity);
             intensityMux++;
             break;
         case 3:
-            extraNotesHHO = drummer.extraNotes(intensityHHO[intensity]);
+            extraNotesHHO = drummer.extraNotes(intensityHHO[intensity], intensity);
             intensityMux = 0;
             currentIntensity = intensity;
             break;
         default:
             break;
         }
-
-        Serial.println("---");
-        Serial.println(intensity);
     }
 }
 

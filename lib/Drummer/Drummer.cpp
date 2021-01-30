@@ -4,8 +4,12 @@
 
 #define POT_MAX_VALUE 1023.0
 #define BLINK_DELAY 50
+#define CHANCE_LOWER_LIMIT 0.5
+#define CHANCE_UPPER_LIMIT 0.9
 
-Drummer::Drummer() {}
+Drummer::Drummer(int maxIntensity = 0) {
+    this->_maxIntensity = maxIntensity;
+}
 
 uint16_t Drummer::mapKnob(uint16_t noOfOptions, uint16_t potValue) {
     int range = ceil(POT_MAX_VALUE / float(noOfOptions));
@@ -18,13 +22,19 @@ void Drummer::trigger(uint8_t pin) {
     digitalWrite(pin, LOW);
 }
 
-uint16_t Drummer::extraNotes(uint16_t map) {
+uint16_t Drummer::extraNotes(uint16_t map, int intensity) {
+    // if (intensity == 0) return;
+
     // Loop through the bits in the map and if it's 1 then randomize it
     uint16_t currentMap = 1;
     uint16_t extranotes = 0;
+
+    // Calculate how much chance the new notes have. Depends on intensity
+    float chance = CHANCE_LOWER_LIMIT + (((CHANCE_UPPER_LIMIT - CHANCE_LOWER_LIMIT)/(_maxIntensity - 2)) * (intensity - 1));
+
     for (int i = 0; i < 16; i++) {
         if (uint16_t(currentMap) & map) {
-            if (random(0, 2)) {
+            if (random(0, _maxIntensity + 1) < (_maxIntensity * chance)) {
                 extranotes |= currentMap;
             }
         }
