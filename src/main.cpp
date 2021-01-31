@@ -178,9 +178,11 @@ void setup() {
     initButtons();
     initKnobs();
 
-    // Set PORTD
+    // Set PORTD 7, 6, 5, 4, 3 as outputs and leaves 0, 1 and 2 untouched (clock on pin 2 is already set to input)
     //             76543210
     DDRD = DDRD | B11111000;
+    
+    // Reset all outputs
     PORTD |= B00000000;
 
     // Listen to clock in on INT0 (digital pin 2)

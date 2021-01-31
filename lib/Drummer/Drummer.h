@@ -16,7 +16,7 @@ class Drummer {
         void trigger(uint8_t pin);
 
         uint16_t extraNotes(uint16_t map, int intensity = 0);
-        uint16_t bmp(int sixteenths);
+        uint16_t bpm(int sixteenths);
         uint16_t shuffleDelay(float pulseLength, float shuffleResolution, float shuffleValue);
 
     private:

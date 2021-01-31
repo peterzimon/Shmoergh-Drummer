@@ -43,7 +43,7 @@ uint16_t Drummer::extraNotes(uint16_t map, int intensity) {
     return extranotes;
 }
 
-uint16_t Drummer::bmp(int sixteenths) {
+uint16_t Drummer::bpm(int sixteenths) {
     return floor(60000 / (sixteenths * 4));
 }
 
